@@ -1,43 +1,53 @@
-const yargs = require('yargs')
-const {addNote,printNotes,removeNote} = require('./notes.controller')
+const http = require('http')
+const chalk = require('chalk')
+const fs = require('fs/promises')
+const path = require('path')
+
+const express = require('express')
+const {addNote,getNotes,removeNote,updateNote} = require('./notes.controller')
+const {request} = require("express");
 
 
-yargs.command({
-    command:'add',
-    describe:'add new note to list',
-    builder:{
-        title:{
-            type:'string',
-            describe:'note title',
-            demandOption: true
-        }
-    },
-    handler({title}){
-        addNote(title)
+const port = 3000
+
+const app = express()
+app.set('view engine','ejs')
+app.set('views','pages')
+app.use(express.urlencoded({extended:true}))
+app.use(express.static(path.resolve(__dirname,'public')))
+app.use(express.json())
+app.get('/',async (req,res)=>{
+    try{
+    res.render('index',{title:'Express App', notes: await getNotes(),created:false})
+    }catch (e) {
+        console.log('err',e);
     }
 })
+app.post('/',async (req,res)=>{
+    try{
+        await addNote(req.body.title)
+        res.render('index',{title:'Express App', notes: await getNotes(),created:true})
+    }catch (e) {
+        console.log('err',e);
+    }
 
-yargs.command({
-    command:'list',
-    describe:'print all notes',
-    async handler(){
-        printNotes()
+})
+app.delete('/:id',async (req, res)=>{
+    try{
+        await removeNote(req.params.id)
+        res.render('index',{title:'Express App', notes: await getNotes(),created:false})
+    }catch (e) {
+        console.log('err',e);
     }
 })
-
-yargs.command({
-    command:'remove',
-    describe:'remove note by id',
-    builder:{
-        id:{
-            type:'string',
-            describe:'note id',
-            demandOption: true
-        }
-    },
-    handler({id}){
-        removeNote(id)
+app.put('/:data',async (req, res)=>{
+    try{
+        await updateNote(req.params.data)
+        res.render('index',{title:'Express App', notes: await getNotes(),created:false})
+    }catch (e) {
+        console.log('err',e);
     }
 })
-
-yargs.parse()
+app.listen(port,()=>{
+    console.log(chalk.green(`server has been started on port ${port}...`))
+})
